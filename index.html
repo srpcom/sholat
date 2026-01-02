@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jadwal Sholat Kab. Tuban</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        
+        .bg-mosque {
+            background: linear-gradient(135deg, #047857 0%, #064e3b 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bg-pattern {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0.1;
+            background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
+        }
+
+        /* Scrollbar styling halus */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<!-- 
+    NOTE UNTUK GOOGLE SITES:
+    - h-screen: Akan mengikuti tinggi kotak yang Anda atur di Google Sites.
+    - overflow-hidden: Mencegah scrollbar ganda.
+-->
+<body class="bg-slate-200 h-screen flex items-center justify-center overflow-hidden">
+
+    <!-- Container Utama -->
+    <div class="w-full h-full md:h-[95vh] md:max-h-[800px] md:w-auto md:aspect-[16/9] bg-white md:rounded-3xl shadow-2xl overflow-hidden relative flex flex-col md:flex-row">
+        
+        <!-- BAGIAN 1: JAM & INFO (ATAS/KIRI) -->
+        <!-- Mobile: Tinggi 40%. Desktop: Full height, Lebar 40% -->
+        <div class="h-[40%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center">
+            <div class="bg-pattern"></div>
+            
+            <!-- Lokasi -->
+            <div class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-3 py-1 rounded-full text-white">
+                <i class="fas fa-map-marker-alt text-emerald-300 text-xs md:text-sm"></i>
+                <h2 class="font-medium tracking-wide text-xs md:text-base">KABUPATEN TUBAN</h2>
+            </div>
+
+            <!-- Jam Digital -->
+            <div class="relative z-10 mb-2 md:mb-8 text-white">
+                <div class="text-5xl md:text-7xl font-bold tracking-tighter drop-shadow-lg leading-none" id="digitalClock">
+                    00<span class="blink">:</span>00
+                </div>
+                <div class="text-emerald-200 text-xs md:text-base mt-1 md:mt-2 font-medium" id="currentDate">Memuat...</div>
+                <div class="text-[10px] md:text-xs text-emerald-300 italic" id="hijriDate">...</div>
+            </div>
+
+            <!-- Countdown Box -->
+            <div class="relative z-10 glass-panel rounded-xl p-2 md:p-6 w-4/5 max-w-xs transform md:hover:scale-105 transition duration-300 text-white mt-1">
+                <p class="text-[10px] md:text-xs text-emerald-100 uppercase tracking-widest mb-1 border-b border-emerald-500/50 pb-1">Menuju <span id="nextPrayerName" class="font-bold">...</span></p>
+                <p class="text-xl md:text-4xl font-bold font-mono tracking-wider" id="countdownTimer">--:--:--</p>
+            </div>
+            
+            <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60">
+                Jadwal Sholat Digital v2.1
+            </div>
+        </div>
+
+        <!-- BAGIAN 2: DAFTAR JADWAL (BAWAH/KANAN) -->
+        <!-- Mobile: Sisa tinggi (flex-1). Desktop: Full height, Lebar 60% -->
+        <div class="flex-1 md:h-full md:w-7/12 bg-white relative z-20 flex flex-col">
+            
+            <!-- Header List (Desktop Only) -->
+            <div class="hidden md:block p-6 pb-2 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800">Jadwal Hari Ini</h3>
+                <p class="text-sm text-gray-500">Waktu Indonesia Barat (WIB)</p>
+            </div>
+
+            <!-- List Container -->
+            <div class="flex-1 overflow-y-auto p-3 md:p-8 relative bg-white">
+                
+                <div id="loading" class="text-center py-10 text-gray-400">
+                    <i class="fas fa-circle-notch fa-spin fa-2x mb-3 text-emerald-500"></i>
+                    <p class="animate-pulse text-xs">Sinkronisasi...</p>
+                </div>
+
+                <div id="scheduleList" class="space-y-2 md:space-y-3 hidden h-full flex flex-col justify-center md:justify-start">
+                    <!-- Item Jadwal render di sini -->
+                </div>
+            </div>
+            
+            <!-- Footer Mobile -->
+            <div class="md:hidden absolute bottom-1 right-2 text-[10px] text-gray-300">
+                Kemenag RI
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CITY = 'Tuban';
+        const COUNTRY = 'Indonesia';
+        const API_URL = `https://api.aladhan.com/v1/timingsByCity?city=${CITY}&country=${COUNTRY}&method=20`;
+
+        const prayerNames = {
+            'Imsak': 'Imsak', 'Fajr': 'Subuh', 'Sunrise': 'Terbit',
+            'Dhuhr': 'Dzuhur', 'Asr': 'Ashar', 'Maghrib': 'Maghrib', 'Isha': 'Isya'
+        };
+
+        const prayerIcons = {
+            'Imsak': 'fa-moon', 'Fajr': 'fa-cloud-sun', 'Sunrise': 'fa-sun',
+            'Dhuhr': 'fa-sun', 'Asr': 'fa-cloud-sun', 'Maghrib': 'fa-cloud-moon', 'Isha': 'fa-moon'
+        };
+
+        let todaySchedule = {};
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('digitalClock').innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
+            
+            if (Object.keys(todaySchedule).length > 0) {
+                updateCountdown(now);
+            }
+        }
+
+        async function fetchPrayerTimes() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    const timings = data.data.timings;
+                    const dateInfo = data.data.date;
+                    
+                    todaySchedule = timings;
+                    
+                    document.getElementById('currentDate').textContent = dateInfo.readable;
+                    document.getElementById('hijriDate').textContent = `${dateInfo.hijri.day} ${dateInfo.hijri.month.en} ${dateInfo.hijri.year} H`;
+
+                    renderSchedule(timings);
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('scheduleList').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function renderSchedule(timings) {
+            const listContainer = document.getElementById('scheduleList');
+            listContainer.innerHTML = '';
+            const relevantTimes = ['Imsak', 'Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+            relevantTimes.forEach(key => {
+                const time = timings[key];
+                const indonesianName = prayerNames[key];
+                const icon = prayerIcons[key];
+
+                const div = document.createElement('div');
+                div.className = `group flex justify-between items-center px-4 py-2 md:p-4 rounded-lg md:rounded-xl transition-all duration-300 border border-gray-100 hover:border-emerald-200 cursor-default ${key}-row`;
+                div.id = `row-${key}`;
+
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <div class="w-8 h-8 md:w-12 md:h-12 rounded-full bg-emerald-50 group-hover:bg-emerald-100 transition-colors flex items-center justify-center text-emerald-600">
+                            <i class="fas ${icon} text-xs md:text-lg"></i>
+                        </div>
+                        <span class="font-semibold text-gray-700 text-sm md:text-lg">${indonesianName}</span>
+                    </div>
+                    <span class="font-bold text-gray-800 text-sm md:text-xl font-mono tracking-wide">${time}</span>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        function updateCountdown(now) {
+            const currentTimeStr = now.toTimeString().slice(0, 5); 
+            let nextPrayer = null;
+            let nextPrayerTimeDate = null;
+            const relevantTimes = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']; 
+
+            document.querySelectorAll('[id^="row-"]').forEach(el => {
+                el.classList.remove('bg-emerald-600', 'text-white', 'shadow-lg', 'scale-[1.02]', 'md:scale-105');
+                el.classList.add('bg-white', 'text-gray-800');
+                
+                const iconBox = el.querySelector('.rounded-full');
+                iconBox.classList.remove('bg-white', 'text-emerald-600');
+                iconBox.classList.add('bg-emerald-50', 'text-emerald-600');
+                
+                el.querySelector('.font-semibold').classList.remove('text-white');
+                el.querySelector('.font-bold').classList.remove('text-white');
+            });
+
+            let foundNext = false;
+            for (let key of relevantTimes) {
+                const timeStr = todaySchedule[key];
+                const [h, m] = timeStr.split(':').map(Number);
+                const prayerDate = new Date();
+                prayerDate.setHours(h, m, 0, 0); 
+
+                if (prayerDate > now) {
+                    nextPrayer = key;
+                    nextPrayerTimeDate = prayerDate;
+                    foundNext = true;
+                    break;
+                }
+            }
+
+            if (!foundNext) {
+                nextPrayer = 'Fajr';
+                const timeStr = todaySchedule['Fajr'];
+                const [h, m] = timeStr.split(':').map(Number);
+                nextPrayerTimeDate = new Date();
+                nextPrayerTimeDate.setDate(nextPrayerTimeDate.getDate() + 1);
+                nextPrayerTimeDate.setHours(h, m, 0, 0);
+            }
+
+            const diff = nextPrayerTimeDate - now;
+            if (diff < 0) return;
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('nextPrayerName').textContent = prayerNames[nextPrayer];
+            document.getElementById('countdownTimer').textContent = 
+                `-${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            const activeRow = document.getElementById(`row-${nextPrayer}`);
+            if (activeRow) {
+                activeRow.classList.remove('bg-white', 'text-gray-800');
+                activeRow.classList.add('bg-emerald-600', 'text-white', 'shadow-lg', 'scale-[1.02]', 'md:scale-105', 'transform');
+                
+                const iconBox = activeRow.querySelector('.rounded-full');
+                iconBox.classList.remove('bg-emerald-50', 'text-emerald-600');
+                iconBox.classList.add('bg-white', 'text-emerald-600');
+
+                activeRow.querySelector('.font-semibold').classList.add('text-white');
+                activeRow.querySelector('.font-semibold').classList.remove('text-gray-700');
+                activeRow.querySelector('.font-bold').classList.add('text-white');
+                activeRow.querySelector('.font-bold').classList.remove('text-gray-800');
+            }
+        }
+
+        fetchPrayerTimes();
+        setInterval(updateClock, 1000);
+        updateClock(); 
+    </script>
+</body>
+</html>
