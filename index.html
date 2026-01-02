@@ -61,7 +61,7 @@
             background: #f8fafc;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border: 8px solid #cbd5e1;
-            transition: transform 0.1s ease-out;
+            transition: transform 0.1s ease-out; /* Smooth movement */
         }
         
         .compass-arrow {
@@ -114,7 +114,6 @@
 
     </style>
 </head>
-<!-- UPDATED: Gunakan h-[100dvh] untuk mobile agar tidak tertutup toolbar browser -->
 <body class="bg-slate-200 h-screen md:h-screen h-[100dvh] flex items-center justify-center overflow-hidden">
 
     <!-- Container Utama -->
@@ -146,7 +145,7 @@
             </div>
             
             <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
-                Jadwal Sholat Digital v3.1 <span id="sourceInfo">• Default: Tuban</span>
+                Jadwal Sholat Digital v3.2 <span id="sourceInfo">• Default: Tuban</span>
             </div>
         </div>
 
@@ -171,7 +170,6 @@
             </div>
 
             <!-- List Container -->
-            <!-- UPDATED: flex-1 allows scroll, min-h-0 prevents flex overflow issue -->
             <div class="flex-1 overflow-y-auto p-3 md:p-8 relative bg-white min-h-0">
                 
                 <div id="loading" class="text-center py-10 text-gray-400">
@@ -185,7 +183,6 @@
             </div>
             
             <!-- Footer Mobile / Action Bar -->
-            <!-- UPDATED: Removed 'absolute' positioning. Now it's part of the flex column so it takes its own space at the bottom -->
             <div class="md:hidden bg-white border-t p-3 flex justify-between items-center z-30 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div class="text-[10px] text-gray-400">
                     <i class="fas fa-sync-alt cursor-pointer mr-1" onclick="requestLocation()"></i> Kemenag RI
@@ -273,7 +270,6 @@
         async function fetchDefaultLocation() {
             if (isUsingGPS) return;
             updateUIState(false, "Kabupaten Tuban");
-            // Hitung kiblat default Tuban
             calculateQibla(currentLat, currentLong);
             const url = `https://api.aladhan.com/v1/timingsByCity?city=${DEFAULT_CITY}&country=Indonesia&method=${CALCULATION_METHOD}`;
             await executeFetch(url);
@@ -298,8 +294,6 @@
                     
                     fetchByCoordinates(currentLat, currentLong);
                     getDetailedLocationName(currentLat, currentLong);
-                    
-                    // Hitung Arah Kiblat Baru
                     calculateQibla(currentLat, currentLong);
                 },
                 (error) => {
@@ -363,7 +357,6 @@
         // --- PERHITUNGAN KIBLAT & KOMPAS ---
         
         function calculateQibla(lat, lng) {
-            // Rumus Haversine/Great Circle untuk Bearing
             const PI = Math.PI;
             const latk = KAABA_LAT * PI / 180;
             const longk = KAABA_LONG * PI / 180;
@@ -374,13 +367,12 @@
             const x = Math.cos(phi) * Math.tan(latk) - Math.sin(phi) * Math.cos(longk - lambda);
             
             let qibla = Math.atan2(y, x) * 180 / PI;
-            qiblaAngle = (qibla + 360) % 360; // Normalisasi ke 0-360
+            qiblaAngle = (qibla + 360) % 360; 
 
-            // Update UI Angka
             document.getElementById('qiblaDegreeDisplay').textContent = Math.round(qiblaAngle) + "°";
             
-            // Hitung Jarak (Opsional)
-            const R = 6371; // Radius bumi km
+            // Hitung Jarak
+            const R = 6371; 
             const dLat = (KAABA_LAT - lat) * PI / 180;
             const dLon = (KAABA_LONG - lng) * PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -388,36 +380,47 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             const d = Math.round(R * c);
             document.getElementById('qiblaDistance').textContent = `Jarak ke Ka'bah: ±${d.toLocaleString()} km`;
-
-            // Set posisi jarum statis relatif terhadap piringan kompas
-            // Jarum merah (Kiblat) harus menunjuk ke arah qiblaAngle pada piringan
-            // Karena piringan akan diputar ke arah Utara, maka jarum cukup ditempel di derajat qiblaAngle
-            // Tetapi karena CSS rotate bekerja searah jarum jam, kita perlu menyesuaikan.
-            // Cara termudah: Putar piringan (Disk) ke arah Utara Perangkat, dan putar Jarum ke arah Qibla.
         }
 
-        // Event Handler Kompas
+        // --- LOGIKA KOMPAS (UPDATED UNTUK ANDROID) ---
         function handleOrientation(event) {
-            let compass = event.webkitCompassHeading || Math.abs(event.alpha - 360);
-            
-            // Kompensasi untuk Android (alpha biasanya 0 saat utara, tapi arah putar berlawanan)
-            if(!event.webkitCompassHeading) {
-                 compass = (event.alpha); // Perlu testing pada device spesifik, Android sangat bervariasi
+            let heading = null;
+
+            // 1. iOS / Webkit (Kompas Standar)
+            if (event.webkitCompassHeading) {
+                heading = event.webkitCompassHeading;
+            }
+            // 2. Android Chrome (Absolute Mode)
+            // 'absolute' property true berarti sensor memberikan nilai real terhadap utara bumi
+            else if (event.absolute === true && event.alpha !== null) {
+                heading = 360 - event.alpha;
+            }
+            // 3. Fallback Android Standard
+            // Seringkali alpha berjalan 0-360 berlawanan jarum jam atau searah jarum jam tergantung device
+            // Di Android umumnya: alpha 0 = Utara (jika absolute), bertambah saat diputar counter-clockwise
+            else if (event.alpha !== null) {
+                 heading = 360 - event.alpha;
             }
 
-            // Update UI
-            document.getElementById('compassStatus').textContent = "Sensor Aktif";
-            document.getElementById('compassStatus').classList.remove('text-yellow-300');
-            document.getElementById('compassStatus').classList.add('text-green-400');
+            if (heading === null) return;
+            
+            // Normalisasi agar selalu 0-360
+            heading = (heading + 360) % 360;
 
-            // Logika Visual:
-            // 1. Putar Piringan Kompas (Disk) agar 'N' selalu menunjuk Utara bumi
-            //    Jika HP menghadap Timur (90deg), piringan harus diputar -90deg (Counter-clockwise)
+            // Update UI Status
+            const statusEl = document.getElementById('compassStatus');
+            statusEl.classList.remove('text-yellow-300');
+            statusEl.classList.add('text-green-400');
+            
+            // Debugging info (optional, helps user trust the data)
+            // statusEl.textContent = `Sensor Aktif (${Math.round(heading)}°)`;
+            statusEl.textContent = "Sensor Aktif (Kalibrasi OK)";
+
+            // Visual: Putar Piringan Kompas berlawanan arah HP
             const disk = document.getElementById('compassDisk');
-            disk.style.transform = `rotate(${-compass}deg)`;
+            disk.style.transform = `rotate(${-heading}deg)`;
 
-            // 2. Jarum Kiblat: Tetap diam relatif terhadap piringan, menunjuk ke sudut Qibla
-            //    Karena piringan sudah berputar ke Utara, kita cukup memutar jarum sejauh sudut Qibla
+            // Jarum Kiblat: Tetap di sudut Qibla relatif terhadap piringan
             const arrow = document.getElementById('qiblaArrow');
             arrow.style.transform = `translateX(-50%) rotate(${qiblaAngle}deg)`;
         }
@@ -431,18 +434,17 @@
                 document.getElementById('iosPermButton').classList.remove('hidden');
                 document.getElementById('compassStatus').textContent = "Perlu Izin Sensor (iOS)";
             } else {
-                // Android / Non-iOS 13+
+                // Android & Modern Browsers
+                // Dengarkan kedua event untuk kompatibilitas maksimal
+                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
                 window.addEventListener('deviceorientation', handleOrientation, true);
-                // Fallback untuk desktop
-                if(!window.DeviceOrientationEvent) {
-                     document.getElementById('compassStatus').textContent = "Perangkat tidak memiliki sensor kompas.";
+                
+                if(!window.DeviceOrientationEvent && !window.ondeviceorientationabsolute) {
+                     document.getElementById('compassStatus').textContent = "Sensor tidak terdeteksi.";
                 }
             }
             
-            // Hitung ulang untuk memastikan visual awal benar
             calculateQibla(currentLat, currentLong);
-            
-            // Visual awal (tanpa sensor)
             const arrow = document.getElementById('qiblaArrow');
             arrow.style.transform = `translateX(-50%) rotate(${qiblaAngle}deg)`;
         }
@@ -450,6 +452,7 @@
         function closeQiblaModal() {
             document.getElementById('qiblaModal').classList.add('hidden');
             window.removeEventListener('deviceorientation', handleOrientation);
+            window.removeEventListener('deviceorientationabsolute', handleOrientation);
         }
 
         function requestCompassPermission() {
