@@ -114,13 +114,14 @@
 
     </style>
 </head>
-<body class="bg-slate-200 h-screen flex items-center justify-center overflow-hidden">
+<!-- UPDATED: Gunakan h-[100dvh] untuk mobile agar tidak tertutup toolbar browser -->
+<body class="bg-slate-200 h-screen md:h-screen h-[100dvh] flex items-center justify-center overflow-hidden">
 
     <!-- Container Utama -->
     <div class="w-full h-full md:h-[95vh] md:max-h-[800px] md:w-auto md:aspect-[16/9] bg-white md:rounded-3xl shadow-2xl overflow-hidden relative flex flex-col md:flex-row">
         
         <!-- BAGIAN 1: JAM & INFO (ATAS/KIRI) -->
-        <div class="h-[40%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center">
+        <div class="h-[38%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center flex-shrink-0">
             <div class="bg-pattern"></div>
             
             <!-- Lokasi Dinamis -->
@@ -145,15 +146,15 @@
             </div>
             
             <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
-                Jadwal Sholat Digital v3.0 <span id="sourceInfo">• Default: Tuban</span>
+                Jadwal Sholat Digital v3.1 <span id="sourceInfo">• Default: Tuban</span>
             </div>
         </div>
 
         <!-- BAGIAN 2: DAFTAR JADWAL (BAWAH/KANAN) -->
-        <div class="flex-1 md:h-full md:w-7/12 bg-white relative z-20 flex flex-col">
+        <div class="flex-1 md:h-full md:w-7/12 bg-white relative z-20 flex flex-col min-h-0">
             
             <!-- Header List -->
-            <div class="hidden md:block p-6 pb-2 border-b border-gray-100 flex justify-between items-end">
+            <div class="hidden md:block p-6 pb-2 border-b border-gray-100 flex justify-between items-end flex-shrink-0">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">Jadwal Hari Ini</h3>
                     <p class="text-sm text-gray-500">Waktu Indonesia Barat (WIB)</p>
@@ -170,7 +171,8 @@
             </div>
 
             <!-- List Container -->
-            <div class="flex-1 overflow-y-auto p-3 md:p-8 relative bg-white">
+            <!-- UPDATED: flex-1 allows scroll, min-h-0 prevents flex overflow issue -->
+            <div class="flex-1 overflow-y-auto p-3 md:p-8 relative bg-white min-h-0">
                 
                 <div id="loading" class="text-center py-10 text-gray-400">
                     <i class="fas fa-circle-notch fa-spin fa-2x mb-3 text-emerald-500"></i>
@@ -183,7 +185,8 @@
             </div>
             
             <!-- Footer Mobile / Action Bar -->
-            <div class="md:hidden absolute bottom-0 left-0 right-0 bg-white border-t p-3 flex justify-between items-center z-30">
+            <!-- UPDATED: Removed 'absolute' positioning. Now it's part of the flex column so it takes its own space at the bottom -->
+            <div class="md:hidden bg-white border-t p-3 flex justify-between items-center z-30 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div class="text-[10px] text-gray-400">
                     <i class="fas fa-sync-alt cursor-pointer mr-1" onclick="requestLocation()"></i> Kemenag RI
                 </div>
