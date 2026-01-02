@@ -120,14 +120,25 @@
     <div class="w-full h-full md:h-[95vh] md:max-h-[800px] md:w-auto md:aspect-[16/9] bg-white md:rounded-3xl shadow-2xl overflow-hidden relative flex flex-col md:flex-row">
         
         <!-- BAGIAN 1: JAM & INFO (ATAS/KIRI) -->
-        <div class="h-[38%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center flex-shrink-0">
+        <!-- Update: Padding disesuaikan agar muat tombol tambahan di HP -->
+        <div class="h-[40%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center flex-shrink-0">
             <div class="bg-pattern"></div>
             
             <!-- Lokasi Dinamis -->
-            <div id="locationBadge" class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-4 py-1.5 rounded-full text-white cursor-pointer hover:bg-emerald-800/50 transition max-w-[90%] md:max-w-[80%]" onclick="requestLocation()">
+            <div id="locationBadge" class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-4 py-1 rounded-full text-white cursor-pointer hover:bg-emerald-800/50 transition max-w-[90%] md:max-w-[80%]" onclick="requestLocation()">
                 <i id="locationIcon" class="fas fa-map-pin text-emerald-300 text-xs md:text-sm flex-shrink-0"></i>
                 <h2 id="locationName" class="font-medium tracking-wide text-[11px] md:text-sm uppercase truncate">KABUPATEN TUBAN</h2>
             </div>
+
+            <!-- Tombol Action Khusus Mobile (NEW) -->
+            <div class="flex md:hidden gap-2 mb-2 z-20">
+                <button onclick="openQiblaModal()" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm">
+                   <i class="fas fa-compass"></i> Arah Kiblat
+               </button>
+               <button onclick="requestLocation()" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm">
+                   <i class="fas fa-sync-alt"></i>
+               </button>
+           </div>
 
             <!-- Jam Digital -->
             <div class="relative z-10 mb-2 md:mb-8 text-white">
@@ -145,14 +156,14 @@
             </div>
             
             <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
-                Jadwal Sholat Digital v3.2 <span id="sourceInfo">• Default: Tuban</span>
+                Jadwal Sholat Digital v3.3 <span id="sourceInfo">• Default: Tuban</span>
             </div>
         </div>
 
         <!-- BAGIAN 2: DAFTAR JADWAL (BAWAH/KANAN) -->
         <div class="flex-1 md:h-full md:w-7/12 bg-white relative z-20 flex flex-col min-h-0">
             
-            <!-- Header List -->
+            <!-- Header List (Desktop Only) -->
             <div class="hidden md:block p-6 pb-2 border-b border-gray-100 flex justify-between items-end flex-shrink-0">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">Jadwal Hari Ini</h3>
@@ -182,19 +193,11 @@
                 </div>
             </div>
             
-            <!-- Footer Mobile / Action Bar -->
-            <div class="md:hidden bg-white border-t p-3 flex justify-between items-center z-30 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                <div class="text-[10px] text-gray-400">
-                    <i class="fas fa-sync-alt cursor-pointer mr-1" onclick="requestLocation()"></i> Kemenag RI
-                </div>
-                <button onclick="openQiblaModal()" class="bg-emerald-600 text-white text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2 active:scale-95 transition">
-                    <i class="fas fa-compass"></i> Cek Kiblat
-                </button>
-            </div>
+            <!-- Footer Mobile sudah dihapus, fungsi dipindah ke atas -->
         </div>
     </div>
 
-    <!-- MODAL KOMPAS (HIDDEN BY DEFAULT) -->
+    <!-- MODAL KOMPAS (SAMA SEPERTI SEBELUMNYA) -->
     <div id="qiblaModal" class="fixed inset-0 z-50 bg-slate-900/95 hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
         
         <button onclick="closeQiblaModal()" class="absolute top-4 right-4 text-white/70 hover:text-white text-2xl">
@@ -208,7 +211,6 @@
 
         <!-- Area Kompas -->
         <div class="relative">
-            <!-- Piringan Kompas (Akan berputar sesuai arah HP) -->
             <div id="compassDisk" class="compass-container">
                 <div class="compass-center"></div>
                 <div class="compass-directions">
@@ -217,12 +219,10 @@
                     <span class="dir-s">S</span>
                     <span class="dir-w">W</span>
                 </div>
-                <!-- Jarum Kiblat (Akan menunjuk ke arah Ka'bah) -->
                 <div id="qiblaArrow" class="compass-arrow"></div>
             </div>
         </div>
 
-        <!-- Info Angka -->
         <div class="mt-8 text-center text-white">
             <div class="text-3xl font-mono font-bold" id="qiblaDegreeDisplay">--°</div>
             <p class="text-xs text-gray-400 mt-1">Sudut Kiblat dari Utara</p>
@@ -233,7 +233,6 @@
             </div>
         </div>
 
-        <!-- Tombol Izin (Khusus iOS) -->
         <button id="iosPermButton" onclick="requestCompassPermission()" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hidden">
             Izinkan Akses Sensor
         </button>
@@ -386,41 +385,27 @@
         function handleOrientation(event) {
             let heading = null;
 
-            // 1. iOS / Webkit (Kompas Standar)
             if (event.webkitCompassHeading) {
                 heading = event.webkitCompassHeading;
             }
-            // 2. Android Chrome (Absolute Mode)
-            // 'absolute' property true berarti sensor memberikan nilai real terhadap utara bumi
             else if (event.absolute === true && event.alpha !== null) {
                 heading = 360 - event.alpha;
             }
-            // 3. Fallback Android Standard
-            // Seringkali alpha berjalan 0-360 berlawanan jarum jam atau searah jarum jam tergantung device
-            // Di Android umumnya: alpha 0 = Utara (jika absolute), bertambah saat diputar counter-clockwise
             else if (event.alpha !== null) {
                  heading = 360 - event.alpha;
             }
 
             if (heading === null) return;
-            
-            // Normalisasi agar selalu 0-360
             heading = (heading + 360) % 360;
 
-            // Update UI Status
             const statusEl = document.getElementById('compassStatus');
             statusEl.classList.remove('text-yellow-300');
             statusEl.classList.add('text-green-400');
-            
-            // Debugging info (optional, helps user trust the data)
-            // statusEl.textContent = `Sensor Aktif (${Math.round(heading)}°)`;
             statusEl.textContent = "Sensor Aktif (Kalibrasi OK)";
 
-            // Visual: Putar Piringan Kompas berlawanan arah HP
             const disk = document.getElementById('compassDisk');
             disk.style.transform = `rotate(${-heading}deg)`;
 
-            // Jarum Kiblat: Tetap di sudut Qibla relatif terhadap piringan
             const arrow = document.getElementById('qiblaArrow');
             arrow.style.transform = `translateX(-50%) rotate(${qiblaAngle}deg)`;
         }
@@ -429,13 +414,10 @@
         function openQiblaModal() {
             document.getElementById('qiblaModal').classList.remove('hidden');
             
-            // Cek Izin iOS
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 document.getElementById('iosPermButton').classList.remove('hidden');
                 document.getElementById('compassStatus').textContent = "Perlu Izin Sensor (iOS)";
             } else {
-                // Android & Modern Browsers
-                // Dengarkan kedua event untuk kompatibilitas maksimal
                 window.addEventListener('deviceorientationabsolute', handleOrientation, true);
                 window.addEventListener('deviceorientation', handleOrientation, true);
                 
