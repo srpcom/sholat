@@ -40,6 +40,18 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Animasi loading text */
+        .loading-dots:after {
+            content: ' .';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ' .'; }
+            40% { content: ' ..'; }
+            60% { content: ' ...'; }
+            80%, 100% { content: ''; }
+        }
     </style>
 </head>
 <body class="bg-slate-200 h-screen flex items-center justify-center overflow-hidden">
@@ -51,10 +63,11 @@
         <div class="h-[40%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center">
             <div class="bg-pattern"></div>
             
-            <!-- Lokasi Dinamis -->
-            <div id="locationBadge" class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-4 py-1.5 rounded-full text-white cursor-pointer hover:bg-emerald-800/50 transition" onclick="requestLocation()">
-                <i id="locationIcon" class="fas fa-map-pin text-emerald-300 text-xs md:text-sm"></i>
-                <h2 id="locationName" class="font-medium tracking-wide text-xs md:text-base uppercase max-w-[200px] truncate">KABUPATEN TUBAN</h2>
+            <!-- Lokasi Dinamis (Updated Layout untuk teks panjang) -->
+            <div id="locationBadge" class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-4 py-1.5 rounded-full text-white cursor-pointer hover:bg-emerald-800/50 transition max-w-[90%] md:max-w-[80%]" onclick="requestLocation()">
+                <i id="locationIcon" class="fas fa-map-pin text-emerald-300 text-xs md:text-sm flex-shrink-0"></i>
+                <!-- Perubahan: Font lebih responsif dan truncate lebih panjang -->
+                <h2 id="locationName" class="font-medium tracking-wide text-[11px] md:text-sm uppercase truncate">KABUPATEN TUBAN</h2>
             </div>
 
             <!-- Jam Digital -->
@@ -73,7 +86,7 @@
             </div>
             
             <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
-                Jadwal Sholat Digital v2.2 <span id="sourceInfo">• Default: Tuban</span>
+                Jadwal Sholat Digital v2.3 <span id="sourceInfo">• Default: Tuban</span>
             </div>
         </div>
 
@@ -87,7 +100,7 @@
                     <p class="text-sm text-gray-500">Waktu Indonesia Barat (WIB)</p>
                 </div>
                 <button onclick="requestLocation()" class="text-xs text-emerald-600 hover:text-emerald-800 font-medium" title="Perbarui Lokasi GPS">
-                    <i class="fas fa-location-crosshairs mr-1"></i> Deteksi Lokasi
+                    <i class="fas fa-location-crosshairs mr-1"></i> Perbarui Lokasi
                 </button>
             </div>
 
@@ -133,19 +146,15 @@
 
         // --- INIT: LANGSUNG JALANKAN DEFAULT ---
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Load Tuban (Default) segera agar user tidak menunggu
             fetchDefaultLocation();
-            // 2. Coba minta GPS secara background
-            requestLocation(true);
-            // 3. Jalankan jam
+            requestLocation(true); // Silent request
             setInterval(updateClock, 1000);
             updateClock();
         });
 
         // Fungsi Ambil Data Default (Tuban)
         async function fetchDefaultLocation() {
-            if (isUsingGPS) return; // Jangan timpa jika GPS sudah dapat
-            
+            if (isUsingGPS) return;
             updateUIState(false, "Kabupaten Tuban");
             const url = `https://api.aladhan.com/v1/timingsByCity?city=${DEFAULT_CITY}&country=${COUNTRY}&method=${CALCULATION_METHOD}`;
             await executeFetch(url);
@@ -158,74 +167,99 @@
                 return;
             }
 
-            // Jika dipanggil manual (tombol), tampilkan loading indikator teks
             if(!isSilent) {
-                document.getElementById('locationName').textContent = "Mencari...";
+                const nameEl = document.getElementById('locationName');
+                nameEl.textContent = "Mencari Koordinat";
+                nameEl.classList.add('loading-dots');
             }
 
             navigator.geolocation.getCurrentPosition(
-                // Sukses
                 (position) => {
                     isUsingGPS = true;
                     const lat = position.coords.latitude;
                     const long = position.coords.longitude;
                     
-                    // 1. Ambil Jadwal Sholat berdasarkan Koordinat
                     fetchByCoordinates(lat, long);
-                    
-                    // 2. Ambil Nama Kota (Reverse Geocoding)
-                    getCityName(lat, long);
+                    getDetailedLocationName(lat, long);
                 },
-                // Gagal/Ditolak
                 (error) => {
                     console.log("GPS Ditolak/Error: Menggunakan Default Tuban");
+                    document.getElementById('locationName').classList.remove('loading-dots');
                     if(!isSilent && !isUsingGPS) {
                         alert("Gagal mendeteksi lokasi. Pastikan GPS aktif. Kembali ke default Tuban.");
+                        fetchDefaultLocation();
                     }
-                    // Fallback ke Tuban jika belum ada data
-                    if(!isUsingGPS) fetchDefaultLocation();
                 }
             );
         }
 
         async function fetchByCoordinates(lat, long) {
-            // Gunakan endpoint 'timings' untuk lat/long (unix timestamp now)
             const timestamp = Math.floor(Date.now() / 1000);
             const url = `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${long}&method=${CALCULATION_METHOD}`;
             await executeFetch(url);
         }
 
-        // Helper: Reverse Geocoding (Lat/Long -> Nama Kota)
-        async function getCityName(lat, long) {
+        // --- UPDATE PENTING: LOGIKA NAMA LOKASI PRESISI ---
+        async function getDetailedLocationName(lat, long) {
             try {
-                // Menggunakan OpenStreetMap Nominatim (Free)
-                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${long}&zoom=10`;
+                // Zoom 18 untuk detail level jalan/bangunan (Desa/Kelurahan)
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${long}&zoom=18&addressdetails=1`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                let cityName = "Lokasi Terdeteksi";
+                let displayName = "LOKASI TERDETEKSI";
+                
                 if(data && data.address) {
-                    // Cari level administrasi yang pas
-                    cityName = data.address.city || data.address.regency || data.address.county || data.address.town || "Lokasi Saya";
+                    const addr = data.address;
+                    
+                    // 1. Ambil Desa/Kelurahan
+                    const village = addr.village || addr.suburb || addr.neighbourhood;
+                    
+                    // 2. Ambil Kecamatan (Mapping OSM Indonesia bervariasi)
+                    const district = addr.city_district || addr.district || addr.municipality || addr.subdistrict; 
+                    
+                    // 3. Ambil Kab/Kota
+                    const city = addr.city || addr.regency || addr.county || addr.town;
+
+                    // Logika Penyusunan Teks
+                    let parts = [];
+                    
+                    // Prioritas 1: Desa + Kecamatan
+                    if (village) parts.push(village.replace("Kelurahan ", "").replace("Desa ", "")); 
+                    if (district) parts.push("Kec. " + district);
+                    
+                    // Jika data desa/kecamatan kurang lengkap, tambah kota
+                    if (parts.length < 2 && city) {
+                        parts.push(city.replace("Kabupaten ", "Kab. ").replace("Kota ", ""));
+                    }
+
+                    // Gabungkan
+                    if (parts.length > 0) {
+                        displayName = parts.join(', ');
+                    } else if (city) {
+                        // Fallback jika hanya dapat nama kota
+                        displayName = city;
+                    }
                 }
-                updateUIState(true, cityName.toUpperCase());
+                
+                updateUIState(true, displayName.toUpperCase());
             } catch (e) {
-                console.error("Gagal ambil nama kota", e);
-                updateUIState(true, "LOKASI GPS");
+                console.error("Gagal ambil detail lokasi", e);
+                // Biarkan teks sebelumnya atau default
             }
         }
 
-        // Helper: Update Tampilan Badge Lokasi
         function updateUIState(isGps, name) {
             const locName = document.getElementById('locationName');
             const locIcon = document.getElementById('locationIcon');
             const sourceInfo = document.getElementById('sourceInfo');
 
+            locName.classList.remove('loading-dots');
             locName.textContent = name;
             
             if(isGps) {
                 locIcon.className = "fas fa-location-arrow text-emerald-300 animate-pulse";
-                if(sourceInfo) sourceInfo.textContent = "• Mode: GPS Aktif";
+                if(sourceInfo) sourceInfo.textContent = "• Mode: GPS Presisi";
             } else {
                 locIcon.className = "fas fa-map-pin text-emerald-300";
                 if(sourceInfo) sourceInfo.textContent = "• Mode: Default (Tuban)";
@@ -255,7 +289,6 @@
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('scheduleList').classList.remove('hidden');
                     
-                    // Trigger update countdown segera
                     updateClock(); 
                 }
             } catch (error) {
@@ -263,7 +296,7 @@
             }
         }
 
-        // --- RENDER & LOGIKA UI (SAMA SEPERTI SEBELUMNYA) ---
+        // --- RENDER & LOGIKA UI ---
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -302,7 +335,6 @@
             let nextPrayerTimeDate = null;
             const relevantTimes = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']; 
 
-            // Reset Style
             document.querySelectorAll('[id^="row-"]').forEach(el => {
                 el.classList.remove('bg-emerald-600', 'text-white', 'shadow-lg', 'scale-[1.02]', 'md:scale-105');
                 el.classList.add('bg-white', 'text-gray-800');
@@ -359,9 +391,6 @@
                 activeRow.querySelector('.font-semibold').classList.remove('text-gray-700');
                 activeRow.querySelector('.font-bold').classList.add('text-white');
                 activeRow.querySelector('.font-bold').classList.remove('text-gray-800');
-                
-                // Auto scroll (optional, safe for mobile)
-                // if(window.innerWidth < 768) activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
     </script>
