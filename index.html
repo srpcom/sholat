@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jadwal Sholat Kab. Tuban</title>
+    <title>Jadwal Sholat Digital</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -42,25 +42,19 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<!-- 
-    NOTE UNTUK GOOGLE SITES:
-    - h-screen: Akan mengikuti tinggi kotak yang Anda atur di Google Sites.
-    - overflow-hidden: Mencegah scrollbar ganda.
--->
 <body class="bg-slate-200 h-screen flex items-center justify-center overflow-hidden">
 
     <!-- Container Utama -->
     <div class="w-full h-full md:h-[95vh] md:max-h-[800px] md:w-auto md:aspect-[16/9] bg-white md:rounded-3xl shadow-2xl overflow-hidden relative flex flex-col md:flex-row">
         
         <!-- BAGIAN 1: JAM & INFO (ATAS/KIRI) -->
-        <!-- Mobile: Tinggi 40%. Desktop: Full height, Lebar 40% -->
         <div class="h-[40%] md:h-full md:w-5/12 bg-mosque relative z-10 flex flex-col justify-center items-center p-4 text-center">
             <div class="bg-pattern"></div>
             
-            <!-- Lokasi -->
-            <div class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-3 py-1 rounded-full text-white">
-                <i class="fas fa-map-marker-alt text-emerald-300 text-xs md:text-sm"></i>
-                <h2 class="font-medium tracking-wide text-xs md:text-base">KABUPATEN TUBAN</h2>
+            <!-- Lokasi Dinamis -->
+            <div id="locationBadge" class="relative z-10 flex items-center justify-center gap-2 mb-2 md:mb-6 opacity-90 bg-emerald-800/30 px-4 py-1.5 rounded-full text-white cursor-pointer hover:bg-emerald-800/50 transition" onclick="requestLocation()">
+                <i id="locationIcon" class="fas fa-map-pin text-emerald-300 text-xs md:text-sm"></i>
+                <h2 id="locationName" class="font-medium tracking-wide text-xs md:text-base uppercase max-w-[200px] truncate">KABUPATEN TUBAN</h2>
             </div>
 
             <!-- Jam Digital -->
@@ -78,19 +72,23 @@
                 <p class="text-xl md:text-4xl font-bold font-mono tracking-wider" id="countdownTimer">--:--:--</p>
             </div>
             
-            <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60">
-                Jadwal Sholat Digital v2.1
+            <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
+                Jadwal Sholat Digital v2.2 <span id="sourceInfo">• Default: Tuban</span>
             </div>
         </div>
 
         <!-- BAGIAN 2: DAFTAR JADWAL (BAWAH/KANAN) -->
-        <!-- Mobile: Sisa tinggi (flex-1). Desktop: Full height, Lebar 60% -->
         <div class="flex-1 md:h-full md:w-7/12 bg-white relative z-20 flex flex-col">
             
-            <!-- Header List (Desktop Only) -->
-            <div class="hidden md:block p-6 pb-2 border-b border-gray-100">
-                <h3 class="text-xl font-bold text-gray-800">Jadwal Hari Ini</h3>
-                <p class="text-sm text-gray-500">Waktu Indonesia Barat (WIB)</p>
+            <!-- Header List -->
+            <div class="hidden md:block p-6 pb-2 border-b border-gray-100 flex justify-between items-end">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Jadwal Hari Ini</h3>
+                    <p class="text-sm text-gray-500">Waktu Indonesia Barat (WIB)</p>
+                </div>
+                <button onclick="requestLocation()" class="text-xs text-emerald-600 hover:text-emerald-800 font-medium" title="Perbarui Lokasi GPS">
+                    <i class="fas fa-location-crosshairs mr-1"></i> Deteksi Lokasi
+                </button>
             </div>
 
             <!-- List Container -->
@@ -107,44 +105,140 @@
             </div>
             
             <!-- Footer Mobile -->
-            <div class="md:hidden absolute bottom-1 right-2 text-[10px] text-gray-300">
-                Kemenag RI
+            <div class="md:hidden absolute bottom-1 right-2 text-[10px] text-gray-300 flex items-center gap-1">
+                <i class="fas fa-sync-alt cursor-pointer" onclick="requestLocation()"></i> Kemenag RI
             </div>
         </div>
     </div>
 
     <script>
-        const CITY = 'Tuban';
+        // --- KONFIGURASI DEFAULT (TUBAN) ---
+        const DEFAULT_CITY = 'Tuban';
         const COUNTRY = 'Indonesia';
-        const API_URL = `https://api.aladhan.com/v1/timingsByCity?city=${CITY}&country=${COUNTRY}&method=20`;
+        // Method 20 = Kemenag RI
+        const CALCULATION_METHOD = 20; 
+
+        // State Global
+        let todaySchedule = {};
+        let isUsingGPS = false;
 
         const prayerNames = {
             'Imsak': 'Imsak', 'Fajr': 'Subuh', 'Sunrise': 'Terbit',
             'Dhuhr': 'Dzuhur', 'Asr': 'Ashar', 'Maghrib': 'Maghrib', 'Isha': 'Isya'
         };
-
         const prayerIcons = {
             'Imsak': 'fa-moon', 'Fajr': 'fa-cloud-sun', 'Sunrise': 'fa-sun',
             'Dhuhr': 'fa-sun', 'Asr': 'fa-cloud-sun', 'Maghrib': 'fa-cloud-moon', 'Isha': 'fa-moon'
         };
 
-        let todaySchedule = {};
+        // --- INIT: LANGSUNG JALANKAN DEFAULT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Load Tuban (Default) segera agar user tidak menunggu
+            fetchDefaultLocation();
+            // 2. Coba minta GPS secara background
+            requestLocation(true);
+            // 3. Jalankan jam
+            setInterval(updateClock, 1000);
+            updateClock();
+        });
 
-        function updateClock() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
+        // Fungsi Ambil Data Default (Tuban)
+        async function fetchDefaultLocation() {
+            if (isUsingGPS) return; // Jangan timpa jika GPS sudah dapat
             
-            document.getElementById('digitalClock').innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
-            
-            if (Object.keys(todaySchedule).length > 0) {
-                updateCountdown(now);
+            updateUIState(false, "Kabupaten Tuban");
+            const url = `https://api.aladhan.com/v1/timingsByCity?city=${DEFAULT_CITY}&country=${COUNTRY}&method=${CALCULATION_METHOD}`;
+            await executeFetch(url);
+        }
+
+        // Fungsi Minta Lokasi GPS
+        function requestLocation(isSilent = false) {
+            if (!navigator.geolocation) {
+                if(!isSilent) alert("Browser Anda tidak mendukung Geolocation.");
+                return;
+            }
+
+            // Jika dipanggil manual (tombol), tampilkan loading indikator teks
+            if(!isSilent) {
+                document.getElementById('locationName').textContent = "Mencari...";
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                // Sukses
+                (position) => {
+                    isUsingGPS = true;
+                    const lat = position.coords.latitude;
+                    const long = position.coords.longitude;
+                    
+                    // 1. Ambil Jadwal Sholat berdasarkan Koordinat
+                    fetchByCoordinates(lat, long);
+                    
+                    // 2. Ambil Nama Kota (Reverse Geocoding)
+                    getCityName(lat, long);
+                },
+                // Gagal/Ditolak
+                (error) => {
+                    console.log("GPS Ditolak/Error: Menggunakan Default Tuban");
+                    if(!isSilent && !isUsingGPS) {
+                        alert("Gagal mendeteksi lokasi. Pastikan GPS aktif. Kembali ke default Tuban.");
+                    }
+                    // Fallback ke Tuban jika belum ada data
+                    if(!isUsingGPS) fetchDefaultLocation();
+                }
+            );
+        }
+
+        async function fetchByCoordinates(lat, long) {
+            // Gunakan endpoint 'timings' untuk lat/long (unix timestamp now)
+            const timestamp = Math.floor(Date.now() / 1000);
+            const url = `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${long}&method=${CALCULATION_METHOD}`;
+            await executeFetch(url);
+        }
+
+        // Helper: Reverse Geocoding (Lat/Long -> Nama Kota)
+        async function getCityName(lat, long) {
+            try {
+                // Menggunakan OpenStreetMap Nominatim (Free)
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${long}&zoom=10`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                let cityName = "Lokasi Terdeteksi";
+                if(data && data.address) {
+                    // Cari level administrasi yang pas
+                    cityName = data.address.city || data.address.regency || data.address.county || data.address.town || "Lokasi Saya";
+                }
+                updateUIState(true, cityName.toUpperCase());
+            } catch (e) {
+                console.error("Gagal ambil nama kota", e);
+                updateUIState(true, "LOKASI GPS");
             }
         }
 
-        async function fetchPrayerTimes() {
+        // Helper: Update Tampilan Badge Lokasi
+        function updateUIState(isGps, name) {
+            const locName = document.getElementById('locationName');
+            const locIcon = document.getElementById('locationIcon');
+            const sourceInfo = document.getElementById('sourceInfo');
+
+            locName.textContent = name;
+            
+            if(isGps) {
+                locIcon.className = "fas fa-location-arrow text-emerald-300 animate-pulse";
+                if(sourceInfo) sourceInfo.textContent = "• Mode: GPS Aktif";
+            } else {
+                locIcon.className = "fas fa-map-pin text-emerald-300";
+                if(sourceInfo) sourceInfo.textContent = "• Mode: Default (Tuban)";
+            }
+        }
+
+        // Inti Fetch Data Aladhan
+        async function executeFetch(url) {
             try {
-                const response = await fetch(API_URL);
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('scheduleList').classList.add('hidden');
+
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 if (data.code === 200) {
@@ -157,12 +251,25 @@
                     document.getElementById('hijriDate').textContent = `${dateInfo.hijri.day} ${dateInfo.hijri.month.en} ${dateInfo.hijri.year} H`;
 
                     renderSchedule(timings);
+                    
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('scheduleList').classList.remove('hidden');
+                    
+                    // Trigger update countdown segera
+                    updateClock(); 
                 }
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Error Fetching:", error);
             }
+        }
+
+        // --- RENDER & LOGIKA UI (SAMA SEPERTI SEBELUMNYA) ---
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('digitalClock').innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
+            if (Object.keys(todaySchedule).length > 0) updateCountdown(now);
         }
 
         function renderSchedule(timings) {
@@ -172,9 +279,6 @@
 
             relevantTimes.forEach(key => {
                 const time = timings[key];
-                const indonesianName = prayerNames[key];
-                const icon = prayerIcons[key];
-
                 const div = document.createElement('div');
                 div.className = `group flex justify-between items-center px-4 py-2 md:p-4 rounded-lg md:rounded-xl transition-all duration-300 border border-gray-100 hover:border-emerald-200 cursor-default ${key}-row`;
                 div.id = `row-${key}`;
@@ -182,9 +286,9 @@
                 div.innerHTML = `
                     <div class="flex items-center gap-3 md:gap-4">
                         <div class="w-8 h-8 md:w-12 md:h-12 rounded-full bg-emerald-50 group-hover:bg-emerald-100 transition-colors flex items-center justify-center text-emerald-600">
-                            <i class="fas ${icon} text-xs md:text-lg"></i>
+                            <i class="fas ${prayerIcons[key]} text-xs md:text-lg"></i>
                         </div>
-                        <span class="font-semibold text-gray-700 text-sm md:text-lg">${indonesianName}</span>
+                        <span class="font-semibold text-gray-700 text-sm md:text-lg">${prayerNames[key]}</span>
                     </div>
                     <span class="font-bold text-gray-800 text-sm md:text-xl font-mono tracking-wide">${time}</span>
                 `;
@@ -198,14 +302,13 @@
             let nextPrayerTimeDate = null;
             const relevantTimes = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']; 
 
+            // Reset Style
             document.querySelectorAll('[id^="row-"]').forEach(el => {
                 el.classList.remove('bg-emerald-600', 'text-white', 'shadow-lg', 'scale-[1.02]', 'md:scale-105');
                 el.classList.add('bg-white', 'text-gray-800');
-                
                 const iconBox = el.querySelector('.rounded-full');
                 iconBox.classList.remove('bg-white', 'text-emerald-600');
                 iconBox.classList.add('bg-emerald-50', 'text-emerald-600');
-                
                 el.querySelector('.font-semibold').classList.remove('text-white');
                 el.querySelector('.font-bold').classList.remove('text-white');
             });
@@ -249,21 +352,18 @@
             if (activeRow) {
                 activeRow.classList.remove('bg-white', 'text-gray-800');
                 activeRow.classList.add('bg-emerald-600', 'text-white', 'shadow-lg', 'scale-[1.02]', 'md:scale-105', 'transform');
-                
                 const iconBox = activeRow.querySelector('.rounded-full');
                 iconBox.classList.remove('bg-emerald-50', 'text-emerald-600');
                 iconBox.classList.add('bg-white', 'text-emerald-600');
-
                 activeRow.querySelector('.font-semibold').classList.add('text-white');
                 activeRow.querySelector('.font-semibold').classList.remove('text-gray-700');
                 activeRow.querySelector('.font-bold').classList.add('text-white');
                 activeRow.querySelector('.font-bold').classList.remove('text-gray-800');
+                
+                // Auto scroll (optional, safe for mobile)
+                // if(window.innerWidth < 768) activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
-
-        fetchPrayerTimes();
-        setInterval(updateClock, 1000);
-        updateClock(); 
     </script>
 </body>
 </html>
