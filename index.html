@@ -19,7 +19,7 @@
     <!-- Link Manifest (Data URI untuk Single File PWA) -->
     <link rel="manifest" id="manifest-placeholder">
 
-    <title>Jadwal Sholat Digital</title>
+    <title>Jadwal Sholat Digital - Standar Kemenag RI</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -78,9 +78,7 @@
             background: #f8fafc;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1), inset 0 0 20px rgba(0,0,0,0.05);
             border: 8px solid #cbd5e1;
-            /* Pastikan hardware acceleration aktif untuk performa smooth */
             will-change: transform;
-            /* Hapus transition CSS agar tidak bentrok dengan JS smoothing */
             transition: none;
         }
         
@@ -106,26 +104,6 @@
             border-bottom: 18px solid #ef4444;
         }
 
-        /* Jarum Utara (Abu-abu/Biru Tipis) untuk referensi */
-        .compass-arrow-north {
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 2px; height: 100px;
-            background: #94a3b8;
-            transform-origin: bottom center;
-            margin-left: -1px; margin-top: -100px;
-            z-index: 5;
-        }
-        .compass-arrow-north::after {
-            content: 'N';
-            position: absolute;
-            top: -20px; left: -50%;
-            transform: translateX(-25%);
-            color: #ef4444;
-            font-weight: bold;
-            font-size: 12px;
-        }
-
         .compass-center {
             position: absolute;
             top: 50%; left: 50%;
@@ -145,13 +123,11 @@
             color: #cbd5e1;
             font-family: monospace;
         }
-        /* Arah Mata Angin Statis (Ikut memutar piringan) */
         .dir-n { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); color: #ef4444; font-size: 1.2rem; }
         .dir-s { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); }
         .dir-e { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
         .dir-w { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); }
 
-        /* Install Prompt Button */
         #installBtn { display: none; }
     </style>
 </head>
@@ -178,6 +154,9 @@
                <button onclick="requestLocation()" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm">
                    <i class="fas fa-sync-alt"></i>
                </button>
+               <button onclick="openInfoModal()" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm">
+                   <i class="fas fa-info-circle"></i> Info
+               </button>
                <!-- Install PWA Button (Hidden by default) -->
                <button id="installBtnMobile" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 transition shadow-sm animate-pulse">
                    <i class="fas fa-download"></i> App
@@ -199,8 +178,8 @@
                 <p class="text-xl md:text-4xl font-bold font-mono tracking-wider" id="countdownTimer">--:--:--</p>
             </div>
             
-            <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
-                Jadwal Sholat Digital v3.6 PWA <span id="sourceInfo">• Default: Tuban</span>
+            <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1 cursor-pointer hover:text-emerald-200 transition" onclick="openInfoModal()">
+                <i class="fas fa-check-circle mr-1"></i> Sesuai Standar Kemenag RI • Koordinat Presisi
             </div>
         </div>
 
@@ -211,11 +190,17 @@
             <div class="hidden md:block p-6 pb-2 border-b border-gray-100 flex justify-between items-end flex-shrink-0">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">Jadwal Hari Ini</h3>
-                    <p class="text-sm text-gray-500">Waktu Indonesia Barat (WIB)</p>
+                    <div class="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                        <i class="fas fa-shield-alt text-emerald-600"></i>
+                        <span>Metode Hisab Kemenag RI</span>
+                    </div>
                 </div>
                 <div class="flex gap-2">
                     <button id="installBtnDesktop" class="hidden text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-full hover:bg-emerald-700 font-medium transition flex items-center gap-1">
                         <i class="fas fa-download"></i> Install App
+                    </button>
+                    <button onclick="openInfoModal()" class="text-xs text-gray-500 hover:text-emerald-600 font-medium px-2 py-1.5 transition">
+                        <i class="fas fa-info-circle mr-1"></i> Sumber Data
                     </button>
                     <button onclick="openQiblaModal()" class="text-xs bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full hover:bg-emerald-200 font-medium transition flex items-center gap-1">
                         <i class="fas fa-compass"></i> Arah Kiblat
@@ -230,7 +215,7 @@
             <div class="flex-1 overflow-y-auto p-3 md:p-8 relative bg-white min-h-0">
                 <div id="loading" class="text-center py-10 text-gray-400">
                     <i class="fas fa-circle-notch fa-spin fa-2x mb-3 text-emerald-500"></i>
-                    <p class="animate-pulse text-xs">Sinkronisasi...</p>
+                    <p class="animate-pulse text-xs">Sinkronisasi Standar Kemenag...</p>
                 </div>
 
                 <div id="scheduleList" class="space-y-2 md:space-y-3 hidden h-full flex flex-col justify-center md:justify-start">
@@ -250,25 +235,17 @@
         <p class="text-emerald-300 text-xs mb-6 text-center max-w-xs animate-pulse">Lakukan gerakan angka 8 (∞) untuk kalibrasi.</p>
         
         <div class="relative">
-            <!-- Piringan Kompas (Berputar sesuai arah Utara) -->
             <div id="compassDisk" class="compass-container">
                 <div class="compass-directions">
                     <span class="dir-n">N</span>
                     <span class="dir-e">E</span>
                     <span class="dir-s">S</span>
                     <span class="dir-w">W</span>
-                    <!-- Tick marks -->
                     <div class="absolute inset-0 border-4 border-slate-200 rounded-full opacity-30"></div>
                 </div>
-                
-                <!-- Jarum Kiblat (Merah) -->
                 <div id="qiblaArrow" class="compass-arrow-qibla"></div>
-                
-                <!-- Titik Tengah -->
                 <div class="compass-center"></div>
             </div>
-            
-            <!-- Indikator Tetap (Device) -->
             <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-white/30 text-xs">
                 <i class="fas fa-mobile-alt"></i> Depan HP
             </div>
@@ -295,6 +272,53 @@
         <button id="iosPermButton" onclick="requestCompassPermission()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-lg hidden transition transform active:scale-95">
             <i class="fas fa-compass mr-2"></i> Izinkan Akses Sensor
         </button>
+    </div>
+
+    <!-- MODAL INFO (NEW) -->
+    <div id="infoModal" class="fixed inset-0 z-50 bg-black/60 hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeInfoModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-600">
+                    <i class="fas fa-check-double text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Validasi & Sumber Data</h3>
+            </div>
+            
+            <div class="space-y-4 text-sm text-gray-600">
+                <div class="flex gap-3">
+                    <i class="fas fa-university text-emerald-500 mt-1 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-gray-800">Standar Kemenag RI</p>
+                        <p class="text-xs leading-relaxed">Perhitungan menggunakan metode hisab resmi Kementerian Agama Republik Indonesia (Sudut Subuh 20°, Isya 18°).</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3">
+                    <i class="fas fa-satellite-dish text-emerald-500 mt-1 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-gray-800">Akurasi GPS Presisi</p>
+                        <p class="text-xs leading-relaxed">Jadwal dihitung berdasarkan koordinat <strong>spesifik lokasi Anda berdiri</strong>. Ini lebih akurat dibanding jadwal cetak yang biasanya hanya mengambil satu titik pusat kota/kabupaten.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <i class="fas fa-exclamation-triangle text-amber-500 mt-1 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-gray-800">Ihtiyat (Kehati-hatian)</p>
+                        <p class="text-xs leading-relaxed">Waktu yang ditampilkan adalah hasil hisab murni. Sesuai anjuran ulama, Anda dapat menambahkan waktu <strong>+2 menit</strong> sebagai langkah kehati-hatian.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-100 text-center">
+                <p class="text-[10px] text-gray-400">Data provided by Aladhan API (Method 20)</p>
+                <button onclick="closeInfoModal()" class="mt-4 w-full bg-emerald-600 text-white py-2 rounded-lg font-medium hover:bg-emerald-700 transition">Mengerti</button>
+            </div>
+        </div>
     </div>
 
     <!-- SCRIPT PWA & APPS -->
@@ -334,7 +358,7 @@
         let currentLong = 112.06;
         let qiblaAngle = 0; 
         
-        // --- LOGIKA KOMPAS BARU & LEBIH AKURAT ---
+        // --- LOGIKA KOMPAS ---
         let currentHeading = 0;
         let targetHeading = 0;
         let isCompassRunning = false;
@@ -357,6 +381,14 @@
                 document.getElementById('installBtnDesktop').classList.remove('hidden');
             });
         });
+
+        // --- INFO MODAL HANDLER ---
+        function openInfoModal() {
+            document.getElementById('infoModal').classList.remove('hidden');
+        }
+        function closeInfoModal() {
+            document.getElementById('infoModal').classList.add('hidden');
+        }
 
         // --- FUNGSI LOKASI & JADWAL ---
         async function fetchDefaultLocation() {
@@ -424,15 +456,13 @@
         function updateUIState(isGps, name) {
             const locName = document.getElementById('locationName');
             const locIcon = document.getElementById('locationIcon');
-            const sourceInfo = document.getElementById('sourceInfo');
+            // sourceInfo updated via CSS/HTML directly
             locName.classList.remove('loading-dots');
             locName.textContent = name;
             if(isGps) {
-                locIcon.className = "fas fa-location-arrow text-emerald-300 animate-pulse";
-                if(sourceInfo) sourceInfo.textContent = "• Mode: GPS Presisi";
+                locIcon.className = "fas fa-location-dot text-emerald-300 animate-pulse";
             } else {
                 locIcon.className = "fas fa-map-pin text-emerald-300";
-                if(sourceInfo) sourceInfo.textContent = "• Mode: Default (Tuban)";
             }
         }
         
@@ -456,31 +486,20 @@
             document.getElementById('qiblaDegreeDisplay').textContent = Math.round(qiblaAngle) + "°";
             document.getElementById('qiblaDistance').textContent = `${Math.round(R * c).toLocaleString()} km`;
             
-            // Update posisi statis jarum kiblat relatif terhadap piringan (0 derajat piringan = Utara)
-            // Jadi jarum kiblat harus menunjuk ke sudut kiblat pada piringan
             document.getElementById('qiblaArrow').style.transform = `translateX(-50%) rotate(${qiblaAngle}deg)`;
         }
 
-        // --- SISTEM KOMPAS SUPER SMOOTH ---
-        
-        // 1. Loop Animasi Fisika
+        // --- SISTEM KOMPAS SMOOTH ---
         function smoothCompass() {
             if (!isCompassRunning) return;
             
-            // Hitung selisih terpendek (shortest path)
             let diff = targetHeading - currentHeading;
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
             
-            // DEADBAND: Hentikan update jika perubahan sangat kecil (< 0.1 derajat)
-            // Ini menghilangkan efek "gemetar" saat HP diam.
             if (Math.abs(diff) > 0.1) {
-                // FACTOR: 0.05 = Sangat berat/stabil (mirip kompas minyak)
-                // Semakin kecil nilai ini, semakin lambat tapi semakin mulus.
                 const smoothingFactor = 0.05; 
                 currentHeading += diff * smoothingFactor;
-                
-                // Terapkan ke elemen DOM
                 const disk = document.getElementById('compassDisk');
                 if(disk) disk.style.transform = `rotate(${-currentHeading}deg)`;
             }
@@ -488,35 +507,23 @@
             compassAnimationId = requestAnimationFrame(smoothCompass);
         }
 
-        // 2. Handler Utama Input Sensor
         function handleOrientation(event) {
             let heading = null;
-            
-            // iOS Webkit
             if (event.webkitCompassHeading) {
                 heading = event.webkitCompassHeading;
-            } 
-            // Android Absolute
-            else if (event.absolute === true && typeof event.alpha !== 'undefined') {
+            } else if (event.absolute === true && typeof event.alpha !== 'undefined') {
+                heading = 360 - event.alpha;
+            } else if (typeof event.alpha !== 'undefined') {
                 heading = 360 - event.alpha;
             }
-            // Fallback
-            else if (typeof event.alpha !== 'undefined') {
-                heading = 360 - event.alpha;
-            }
-
             if (heading == null) return;
-            
-            // Normalisasi 0-360
             targetHeading = (heading + 360) % 360;
-            
             updateStatusText(event.absolute, event.webkitCompassHeading);
         }
         
         function updateStatusText(isAbsolute, isIOS) {
             const el = document.getElementById('compassStatus');
             el.classList.remove('text-yellow-500', 'text-red-500', 'text-green-500');
-            
             if (isIOS) {
                 el.textContent = "Sensor iOS (Akurat)";
                 el.classList.add('text-green-400');
@@ -530,14 +537,11 @@
         }
 
         function openQiblaModal() {
-            // Reset state untuk mencegah loop ganda
             if (isCompassRunning) closeQiblaModal();
-            
             document.getElementById('qiblaModal').classList.remove('hidden');
             isCompassRunning = true;
-            smoothCompass(); // Mulai loop animasi
+            smoothCompass(); 
             
-            // Cek Izin iOS 13+
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 document.getElementById('iosPermButton').classList.remove('hidden');
                 document.getElementById('compassStatus').textContent = "Perlu Izin iOS";
@@ -547,7 +551,6 @@
                 } 
                 window.addEventListener('deviceorientation', handleOrientation, true);
             }
-            
             calculateQibla(currentLat, currentLong);
         }
 
@@ -555,8 +558,6 @@
             document.getElementById('qiblaModal').classList.add('hidden');
             isCompassRunning = false;
             cancelAnimationFrame(compassAnimationId);
-            
-            // Bersihkan listener
             window.removeEventListener('deviceorientation', handleOrientation);
             if ('ondeviceorientationabsolute' in window) {
                 window.removeEventListener('deviceorientationabsolute', handleOrientation);
