@@ -325,7 +325,15 @@
     <!-- SCRIPT PWA & APPS -->
     <script>
         // --- 1. SETUP PWA MANIFEST & SERVICE WORKER ---
-        const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="background-color:#047857"><path d="M260.6 85.8C252.3 84.1 243.8 86.8 238.6 92.8C233.4 98.9 232.4 107.2 236 114.2C278.3 197.6 259.6 303.8 188.3 363.9C119.5 421.9 27.9 432.2 0 432.2C10.7 483.5 56.4 512 108.8 512C232.8 512 344 416.7 353.4 290.4C362.8 164.1 278.4 47.9 157.9 16C158.4 16 159 16 159.5 16C205.6 16 248.6 42.4 260.6 85.8Z" fill="white"/></svg>`;
+        
+        // Pilihan Favicon 1: Masjid Modern (Rekomendasi)
+        const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <rect width="512" height="512" rx="128" fill="#047857"/>
+            <path d="M384 240H356.3C349.3 190.5 306.9 152 256 152C205.1 152 162.7 190.5 155.7 240H128C114.7 240 104 250.7 104 264V408C104 421.3 114.7 432 128 432H384C397.3 432 408 421.3 408 408V264C408 250.7 397.3 240 384 240ZM256 184C282.2 184 304.6 201.7 311.9 225.6C312.8 228.4 313.3 231.4 313.3 234.4V240H198.7V234.4C198.7 231.4 199.2 228.4 200.1 225.6C207.4 201.7 229.8 184 256 184V184Z" fill="white"/>
+            <circle cx="256" cy="112" r="24" fill="white"/>
+            <rect x="246" y="72" width="20" height="40" rx="10" fill="white"/>
+        </svg>`;
+        
         const iconBlob = new Blob([iconSvg], {type: 'image/svg+xml'});
         const iconUrl = URL.createObjectURL(iconBlob);
 
