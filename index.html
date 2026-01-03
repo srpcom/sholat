@@ -78,8 +78,10 @@
             background: #f8fafc;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1), inset 0 0 20px rgba(0,0,0,0.05);
             border: 8px solid #cbd5e1;
-            /* Transisi dihapus dari CSS karena dihandle JS untuk smoothing */
+            /* Pastikan hardware acceleration aktif untuk performa smooth */
             will-change: transform;
+            /* Hapus transition CSS agar tidak bentrok dengan JS smoothing */
+            transition: none;
         }
         
         /* Jarum Kiblat (Merah) */
@@ -198,7 +200,7 @@
             </div>
             
             <div class="hidden md:block absolute bottom-4 text-[10px] text-emerald-400/60 flex items-center gap-1">
-                Jadwal Sholat Digital v3.5 PWA <span id="sourceInfo">• Default: Tuban</span>
+                Jadwal Sholat Digital v3.6 PWA <span id="sourceInfo">• Default: Tuban</span>
             </div>
         </div>
 
@@ -459,41 +461,46 @@
             document.getElementById('qiblaArrow').style.transform = `translateX(-50%) rotate(${qiblaAngle}deg)`;
         }
 
-        // --- SISTEM KOMPAS YANG DIPERBAIKI ---
+        // --- SISTEM KOMPAS SUPER SMOOTH ---
         
-        // 1. Smoothing Animation Loop
+        // 1. Loop Animasi Fisika
         function smoothCompass() {
             if (!isCompassRunning) return;
             
-            // Hitung selisih terpendek untuk rotasi (biar gak muter 360 derajat pas lewat utara)
+            // Hitung selisih terpendek (shortest path)
             let diff = targetHeading - currentHeading;
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
             
-            // Faktor smoothing (0.1 = lambat/halus, 0.5 = cepat)
-            currentHeading += diff * 0.15;
-            
-            // Terapkan ke elemen DOM
-            // Piringan kompas diputar berlawanan jarum jam sebesar heading agar "Utara" di piringan menunjuk Utara asli
-            const disk = document.getElementById('compassDisk');
-            if(disk) disk.style.transform = `rotate(${-currentHeading}deg)`;
+            // DEADBAND: Hentikan update jika perubahan sangat kecil (< 0.1 derajat)
+            // Ini menghilangkan efek "gemetar" saat HP diam.
+            if (Math.abs(diff) > 0.1) {
+                // FACTOR: 0.05 = Sangat berat/stabil (mirip kompas minyak)
+                // Semakin kecil nilai ini, semakin lambat tapi semakin mulus.
+                const smoothingFactor = 0.05; 
+                currentHeading += diff * smoothingFactor;
+                
+                // Terapkan ke elemen DOM
+                const disk = document.getElementById('compassDisk');
+                if(disk) disk.style.transform = `rotate(${-currentHeading}deg)`;
+            }
             
             compassAnimationId = requestAnimationFrame(smoothCompass);
         }
 
-        // 2. Handler Utama
+        // 2. Handler Utama Input Sensor
         function handleOrientation(event) {
             let heading = null;
             
-            // iOS Webkit (Paling Akurat di iPhone)
+            // iOS Webkit
             if (event.webkitCompassHeading) {
                 heading = event.webkitCompassHeading;
             } 
-            // Android Absolute (Chrome modern)
+            // Android Absolute
             else if (event.absolute === true && typeof event.alpha !== 'undefined') {
                 heading = 360 - event.alpha;
             }
-            // Fallback (Kurang akurat, tapi lebih baik daripada error)
+            // Fallback
             else if (typeof event.alpha !== 'undefined') {
                 heading = 360 - event.alpha;
             }
@@ -523,6 +530,9 @@
         }
 
         function openQiblaModal() {
+            // Reset state untuk mencegah loop ganda
+            if (isCompassRunning) closeQiblaModal();
+            
             document.getElementById('qiblaModal').classList.remove('hidden');
             isCompassRunning = true;
             smoothCompass(); // Mulai loop animasi
@@ -532,15 +542,12 @@
                 document.getElementById('iosPermButton').classList.remove('hidden');
                 document.getElementById('compassStatus').textContent = "Perlu Izin iOS";
             } else {
-                // Prioritaskan event Absolute untuk Android
                 if ('ondeviceorientationabsolute' in window) {
                     window.addEventListener('deviceorientationabsolute', handleOrientation, true);
                 } 
-                // Selalu listen standard sebagai fallback atau pelengkap
                 window.addEventListener('deviceorientation', handleOrientation, true);
             }
             
-            // Pastikan kiblat dihitung ulang
             calculateQibla(currentLat, currentLong);
         }
 
