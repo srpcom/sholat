@@ -88,7 +88,7 @@
             <!-- Lokasi Dinamis -->
             <div id="locationBadge" class="relative z-10 flex items-center justify-center gap-2 mb-3 md:mb-6 opacity-90 bg-emerald-800/30 px-4 py-1.5 rounded-full text-white cursor-pointer hover:bg-emerald-800/50 transition max-w-[90%] md:max-w-[80%]" onclick="requestLocation()">
                 <i id="locationIcon" class="fas fa-map-pin text-emerald-300 text-sm md:text-base flex-shrink-0"></i>
-                <h2 id="locationName" class="font-medium tracking-wide text-xs md:text-sm uppercase truncate">KABUPATEN TUBAN</h2>
+                <h2 id="locationName" class="font-medium tracking-wide text-xs md:text-sm uppercase truncate">MARKAZ: RSUD DR. R. KOESMA</h2>
             </div>
 
             <!-- Tombol Action Khusus Mobile -->
@@ -197,6 +197,14 @@
                 </div>
 
                 <div class="flex gap-3">
+                    <i class="fas fa-map-marker-alt text-blue-500 mt-1 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-gray-800">Titik Referensi (Markaz)</p>
+                        <p class="text-xs leading-relaxed">Secara default, titik koordinat berpusat di <strong>RSUD dr. R. Koesma</strong>. Jika lokasi/GPS Anda tidak terdeteksi, sistem otomatis menggunakan data jadwal dari markaz ini.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
                     <i class="fas fa-exclamation-triangle text-amber-500 mt-1 flex-shrink-0"></i>
                     <div>
                         <p class="font-bold text-gray-800">Ihtiyat (Kehati-hatian)</p>
@@ -257,13 +265,14 @@
         document.getElementById('manifest-placeholder').setAttribute('href', URL.createObjectURL(blobManifest));
 
         // --- 2. LOGIKA UTAMA APLIKASI ---
-        const DEFAULT_CITY = 'Tuban';
         const CALCULATION_METHOD = 20; 
+        const MARKAZ_LAT = -6.8968; // Koordinat RSUD dr. R. Koesma
+        const MARKAZ_LONG = 112.0465;
 
         let todaySchedule = {};
         let isUsingGPS = false;
-        let currentLat = -6.89; 
-        let currentLong = 112.06;
+        let currentLat = MARKAZ_LAT; 
+        let currentLong = MARKAZ_LONG;
 
         const prayerNames = { 'Imsak': 'Imsak', 'Fajr': 'Subuh', 'Sunrise': 'Terbit', 'Dhuhr': 'Dzuhur', 'Asr': 'Ashar', 'Maghrib': 'Maghrib', 'Isha': 'Isya' };
         const prayerIcons = { 'Imsak': 'fa-moon', 'Fajr': 'fa-cloud-sun', 'Sunrise': 'fa-sun', 'Dhuhr': 'fa-sun', 'Asr': 'fa-cloud-sun', 'Maghrib': 'fa-cloud-moon', 'Isha': 'fa-moon' };
@@ -294,9 +303,8 @@
         // --- FUNGSI LOKASI & JADWAL ---
         async function fetchDefaultLocation() {
             if (isUsingGPS) return;
-            updateUIState(false, "Kabupaten Tuban");
-            const url = `https://api.aladhan.com/v1/timingsByCity?city=${DEFAULT_CITY}&country=Indonesia&method=${CALCULATION_METHOD}`;
-            await executeFetch(url);
+            updateUIState(false, "MARKAZ: RSUD DR. R. KOESMA");
+            await fetchByCoordinates(MARKAZ_LAT, MARKAZ_LONG);
         }
 
         function requestLocation(isSilent = false) {
